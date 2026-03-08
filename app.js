@@ -199,7 +199,17 @@
     } catch (e) { /* ignore */ }
 
     saveFeedback.classList.remove('hidden');
-    setTimeout(function () { saveFeedback.classList.add('hidden'); }, 2500);
+    setTimeout(function () {
+      saveFeedback.classList.add('hidden');
+      var idx = currentListRows.indexOf(currentDetailRow);
+      if (idx >= 0 && idx + 1 < currentListRows.length) {
+        showDetail(currentListRows[idx + 1]);
+      } else {
+        // Last work order — return to list
+        viewDetail.classList.add('hidden');
+        viewList.classList.remove('hidden');
+      }
+    }, 800);
   });
 
   // ── Retry ───────────────────────────────────────────────────────────────
@@ -368,12 +378,19 @@
       sorted.forEach(function (pair) {
         var code  = pair[0];
         var count = pair[1];
+        var colors = getCodeColors(code);
+        var badgeStyle = colors.bg
+          ? ' style="background:' + colors.bg + ';color:' + colors.text + '"'
+          : '';
         var card  = document.createElement('div');
         card.className = 'code-card code-card--clickable';
         card.setAttribute('role', 'button');
         card.setAttribute('tabindex', '0');
+        if (colors.bg) {
+          card.style.borderLeft = '3px solid ' + colors.bg;
+        }
         card.innerHTML =
-          '<div class="code-badge">' + esc(code) + '</div>' +
+          '<div class="code-badge"' + badgeStyle + '>' + esc(code) + '</div>' +
           '<div class="code-info">' +
             '<div class="code-count">' + count + '</div>' +
             '<div class="code-label">order' + (count !== 1 ? 's' : '') + '</div>' +
@@ -619,6 +636,24 @@
       // User cancelled the picker — fall back to a regular download
       triggerDownload(engineerCode, csv);
     });
+  }
+
+  // ── Notification code colour map ─────────────────────────────────────────
+  function getCodeColors(code) {
+    var map = {
+      'RDLK': { bg: '#c62828', text: '#fff' },
+      'LKFS': { bg: '#212121', text: '#fff' },
+      'TLOC': { bg: '#212121', text: '#fff' },
+      'LKOO': { bg: '#212121', text: '#fff' },
+      'LOCK': { bg: '#212121', text: '#fff' },
+      'MT31': { bg: '#f9a825', text: '#212121' },
+      'CKRD': { bg: '#f9a825', text: '#212121' },
+      'ESTS': { bg: '#f9a825', text: '#212121' },
+      'RMBE': { bg: '#e65100', text: '#fff' },
+      'TC01': { bg: '#00897b', text: '#fff' },
+      'MOVE': { bg: '#1565c0', text: '#fff' },
+    };
+    return map[code] || { bg: null, text: null };
   }
 
   function csvCell(val) {
