@@ -22,6 +22,7 @@
   var listSearch      = document.getElementById('list-search');
   var btnBackDetail   = document.getElementById('btn-back-detail');
   var btnLogoutDetail = document.getElementById('btn-logout-detail');
+  var detailHeader    = document.querySelector('#view-detail .app-header');
   var detailWoNum     = document.getElementById('detail-wo-num');
   var detailInfo      = document.getElementById('detail-info');
   var readingInput    = document.getElementById('reading-input');
@@ -35,6 +36,9 @@
   var dashboardContent = document.getElementById('dashboard-content');
   var totalCount      = document.getElementById('total-count');
   var breakdownGrid   = document.getElementById('breakdown-grid');
+  var progressFill    = document.getElementById('progress-bar-fill');
+  var progressLabel   = document.getElementById('progress-label');
+  var btnEmailCsv     = document.getElementById('btn-email-csv');
 
   // ── Cached data (set after first fetch) ─────────────────────────────────
   var cachedMyRows    = null;   // rows filtered to the logged-in engineer
@@ -146,6 +150,30 @@
     showList(null);
   });
 
+  // ── Email CSV ────────────────────────────────────────────────────────────
+  btnEmailCsv.addEventListener('click', function () {
+    var sess = JSON.parse(sessionStorage.getItem('wo_engineer') || '{}');
+    var engineerCode = sess.code || 'unknown';
+    var csv = buildCSV();
+    var date = new Date().toISOString().slice(0, 10);
+    var filename = 'wo-entries-' + engineerCode + '-' + date + '.csv';
+    var subject = 'Work Orders — ' + engineerCode + ' — ' + date;
+
+    // Web Share API: lets the user pick Mail, Messages, etc. on mobile
+    if (navigator.canShare) {
+      var blob = new Blob([csv], { type: 'text/csv' });
+      var file = new File([blob], filename, { type: 'text/csv' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: subject }).catch(function () {});
+        return;
+      }
+    }
+
+    // Fallback: open mailto: with CSV pasted into the body
+    window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) +
+      '&body=' + encodeURIComponent(csv);
+  });
+
   // ── Search ───────────────────────────────────────────────────────────────
   listSearch.addEventListener('input', applySearch);
 
@@ -153,6 +181,7 @@
   btnBack.addEventListener('click', function () {
     viewList.classList.add('hidden');
     viewDashboard.classList.remove('hidden');
+    updateProgress();
   });
 
   // ── Back: detail → list ──────────────────────────────────────────────────
@@ -406,7 +435,21 @@
       });
     }
 
+    updateProgress();
     setContent();
+  }
+
+  // ── Progress bar ─────────────────────────────────────────────────────────
+  function updateProgress() {
+    if (!cachedMyRows) return;
+    var total = cachedMyRows.length;
+    var savedCount = cachedMyRows.filter(function (row) {
+      var wo = (cachedWoIdx >= 0 ? (row[cachedWoIdx] || '') : '').trim();
+      return wo && localStorage.getItem('wo_entry_' + wo) !== null;
+    }).length;
+    var pct = total > 0 ? Math.round((savedCount / total) * 100) : 0;
+    progressFill.style.width = pct + '%';
+    progressLabel.textContent = savedCount + ' of ' + total + ' completed (' + pct + '%)';
   }
 
   // ── Show list view ───────────────────────────────────────────────────────
@@ -461,18 +504,22 @@
     }
 
     rows.forEach(function (row) {
-      var wo   = (row[cachedWoIdx]      || '').trim();
-      var addr = (row[cachedAddrIdx]    || '').trim();
-      var city = (row[cachedCityIdx]    || '').trim();
-      var loc  = (row[cachedMeterLocIdx] || '').trim();
+      var wo     = (row[cachedWoIdx]       || '').trim();
+      var addr   = (row[cachedAddrIdx]     || '').trim();
+      var city   = (row[cachedCityIdx]     || '').trim();
+      var loc    = (row[cachedMeterLocIdx] || '').trim();
+      var code   = (row[cachedCodeIdx]     || '').trim();
+      var colors = getCodeColors(code);
 
       var item = document.createElement('div');
       item.className = 'wo-item wo-item--clickable';
+      if (colors.bg) item.style.borderLeft = '4px solid ' + colors.bg;
       item.innerHTML =
         '<div class="wo-body">' +
           '<div class="wo-address">' + esc(addr || '—') + '</div>' +
           (city ? '<div class="wo-city">' + esc(city) + '</div>' : '') +
           (loc  ? '<div class="wo-loc">'  + esc(loc)  + '</div>' : '') +
+          (code ? '<div class="wo-code"' + (colors.bg ? ' style="background:' + colors.bg + ';color:' + colors.text + '"' : '') + '>' + esc(code) + '</div>' : '') +
         '</div>' +
         (wo ? '<div class="wo-num">' + esc(wo) + '</div>' : '') +
         '<div class="wo-arrow">&#8250;</div>';
@@ -496,32 +543,58 @@
     var wo = (row[cachedWoIdx] || '').trim();
     detailWoNum.textContent = wo || '';
 
-    // Info fields
-    var fields = [
+    // Colour the header banner by notification code
+    var notifCode  = (cachedCodeIdx >= 0 ? (row[cachedCodeIdx] || '') : '').trim();
+    var hdrColors  = getCodeColors(notifCode);
+    detailHeader.style.background = hdrColors.bg || '#1565c0';
+
+    // Info fields — singles and [paired] groups (City removed)
+    var fieldGroups = [
       { label: 'Work Order',        idx: cachedWoIdx },
       { label: 'Address',           idx: cachedAddrIdx },
-      { label: 'City',              idx: cachedCityIdx },
-      { label: 'Meter Number',      idx: cachedMeterNumIdx },
-      { label: 'Meter Size',        idx: cachedMeterSizeIdx },
+      [
+        { label: 'Meter Number',    idx: cachedMeterNumIdx },
+        { label: 'Meter Size',      idx: cachedMeterSizeIdx },
+      ],
       { label: 'Notification Type', idx: cachedNotifTypeIdx },
-      { label: 'Reference ERT',     idx: cachedRefErtIdx },
-      { label: 'Meter Location',    idx: cachedMeterLocIdx },
-      { label: 'Target Start',      idx: cachedTgtStartIdx },
-      { label: 'Target Finish',     idx: cachedTgtFinishIdx },
+      [
+        { label: 'Reference ERT',   idx: cachedRefErtIdx },
+        { label: 'Meter Location',  idx: cachedMeterLocIdx },
+      ],
+      [
+        { label: 'Target Start',    idx: cachedTgtStartIdx,  date: true },
+        { label: 'Target Finish',   idx: cachedTgtFinishIdx, date: true },
+      ],
     ];
 
     detailInfo.innerHTML = '';
-    fields.forEach(function (f) {
-      var raw = (f.idx >= 0 ? (row[f.idx] || '') : '').trim();
-      if (!raw) return; // skip empty fields
-      // Strip time portion from date-like values (e.g. "2025-12-31 00:00")
-      var val = raw.replace(/\s00:00(:00)?$/, '');
-      var div = document.createElement('div');
-      div.className = 'detail-row';
-      div.innerHTML =
-        '<span class="detail-label">' + esc(f.label) + '</span>' +
-        '<span class="detail-value">' + esc(val) + '</span>';
-      detailInfo.appendChild(div);
+    fieldGroups.forEach(function (group) {
+      if (Array.isArray(group)) {
+        var pairDiv = document.createElement('div');
+        pairDiv.className = 'detail-pair';
+        group.forEach(function (f) {
+          var raw = (f.idx >= 0 ? (row[f.idx] || '') : '').trim();
+          if (!raw) return;
+          var val = f.date ? formatDate(raw) : raw.replace(/\s00:00(:00)?$/, '');
+          var div = document.createElement('div');
+          div.className = 'detail-row';
+          div.innerHTML =
+            '<span class="detail-label">' + esc(f.label) + '</span>' +
+            '<span class="detail-value">' + esc(val) + '</span>';
+          pairDiv.appendChild(div);
+        });
+        if (pairDiv.children.length > 0) detailInfo.appendChild(pairDiv);
+      } else {
+        var raw = (group.idx >= 0 ? (row[group.idx] || '') : '').trim();
+        if (!raw) return;
+        var val = group.date ? formatDate(raw) : raw.replace(/\s00:00(:00)?$/, '');
+        var div = document.createElement('div');
+        div.className = 'detail-row';
+        div.innerHTML =
+          '<span class="detail-label">' + esc(group.label) + '</span>' +
+          '<span class="detail-value">' + esc(val) + '</span>';
+        detailInfo.appendChild(div);
+      }
     });
 
     // Restore any previously saved entry for this work order
@@ -636,6 +709,21 @@
       // User cancelled the picker — fall back to a regular download
       triggerDownload(engineerCode, csv);
     });
+  }
+
+  // ── Date formatter: "2025-03-08" → "Mar 08 (Sat)" ───────────────────────
+  function formatDate(val) {
+    if (!val) return val;
+    var s = val.replace(/\s00:00(:00)?$/, '').trim();
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return s; // not a recognised date — return as-is
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var year   = parseInt(m[1], 10);
+    var mo     = parseInt(m[2], 10) - 1;
+    var day    = parseInt(m[3], 10);
+    var d      = new Date(year, mo, day); // local date, avoids UTC offset issues
+    return months[mo] + ' ' + (day < 10 ? '0' + day : day) + ' (' + days[d.getDay()] + ')';
   }
 
   // ── Notification code colour map ─────────────────────────────────────────

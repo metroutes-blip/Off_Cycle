@@ -287,7 +287,14 @@ body {
   margin-bottom: 16px;
 }
 
+.card-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
 .btn-view-all {
+  flex: 1;
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 1.5px solid rgba(255, 255, 255, 0.5);
@@ -299,6 +306,46 @@ body {
   transition: background 0.15s;
 }
 .btn-view-all:hover { background: rgba(255, 255, 255, 0.32); }
+
+.btn-email-csv {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-email-csv:hover { background: rgba(255, 255, 255, 0.25); }
+
+.progress-section {
+  margin-top: 18px;
+}
+
+.progress-bar-wrap {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 7px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  width: 0%;
+  transition: width 0.5s ease;
+}
+
+.progress-label {
+  font-size: 12px;
+  opacity: 0.85;
+  letter-spacing: 0.03em;
+}
 
 /* ── BREAKDOWN SECTION ─────────────────────────────────────────────────── */
 .section-title {
@@ -505,6 +552,18 @@ body {
   flex-shrink: 0;
 }
 
+.wo-code {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-top: 5px;
+  letter-spacing: 0.05em;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
 /* ── DETAIL MAIN ────────────────────────────────────────────────────────── */
 .detail-main {
   max-width: 640px;
@@ -530,6 +589,23 @@ body {
 }
 .detail-row:last-child {
   border-bottom: none;
+}
+
+/* Side-by-side pairs */
+.detail-pair {
+  display: flex;
+  border-bottom: 1px solid var(--bg);
+}
+.detail-pair:last-child {
+  border-bottom: none;
+}
+.detail-pair .detail-row {
+  flex: 1;
+  min-width: 0;
+  border-bottom: none;
+}
+.detail-pair .detail-row + .detail-row {
+  border-left: 1px solid var(--bg);
 }
 
 .detail-label {

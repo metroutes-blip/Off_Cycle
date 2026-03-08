@@ -1,6 +1,6 @@
 /* ── Work Order Dashboard — Service Worker ─────────────────────────────── */
 
-var CACHE_NAME = 'wo-dashboard-v1.7.0';
+var CACHE_NAME = 'wo-dashboard-v2.0.0';
 
 var APP_SHELL = [
   './',
