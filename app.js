@@ -54,6 +54,9 @@
   var currentDetailRow  = null;   // raw row array for the open detail view
   var currentListRows   = [];     // rows shown in list view (after code filter, before search)
 
+  // ── CSV file handle (File System Access API, in-memory for the session) ──
+  var csvFileHandle = null;
+
   // ── Boot ────────────────────────────────────────────────────────────────
   document.getElementById('version-label').textContent = 'v' + CONFIG.VERSION;
   populateDropdown();
@@ -183,10 +186,16 @@
       localStorage.setItem('wo_entry_' + wo, JSON.stringify(entry));
     } catch (e) { /* storage unavailable */ }
 
-    // Download a CSV of all saved entries
+    // Save CSV of all entries (overwrite if FSA supported, else download)
     try {
       var sess = JSON.parse(sessionStorage.getItem('wo_engineer') || '{}');
-      downloadCSV(sess.code || 'unknown');
+      var code = sess.code || 'unknown';
+      var csv  = buildCSV();
+      if (window.showSaveFilePicker) {
+        saveCSVToFile(code, csv);
+      } else {
+        triggerDownload(code, csv);
+      }
     } catch (e) { /* ignore */ }
 
     saveFeedback.classList.remove('hidden');
@@ -537,7 +546,9 @@
   }
 
   // ── CSV export ───────────────────────────────────────────────────────────
-  function downloadCSV(engineerCode) {
+
+  // Build the CSV string from all localStorage entries
+  function buildCSV() {
     var headers = [
       'Work Order', 'Address', 'City', 'Meter Number', 'Meter Size',
       'Notification Type', 'Reference ERT', 'Meter Location',
@@ -550,7 +561,6 @@
       'tgtStart', 'tgtFinish',
       'reading', 'compCode', 'activityText', 'savedAt'
     ];
-
     var rows = [headers.map(csvCell).join(',')];
     Object.keys(localStorage)
       .filter(function (k) { return k.indexOf('wo_entry_') === 0; })
@@ -560,8 +570,11 @@
           rows.push(fields.map(function (f) { return csvCell(e[f] || ''); }).join(','));
         } catch (ex) { /* skip corrupt entry */ }
       });
+    return rows.join('\r\n');
+  }
 
-    var csv = rows.join('\r\n');
+  // Fallback: trigger a browser download (used when FSA is unavailable)
+  function triggerDownload(engineerCode, csv) {
     var date = new Date().toISOString().slice(0, 10);
     var filename = 'wo-entries-' + engineerCode + '-' + date + '.csv';
     var a = document.createElement('a');
@@ -570,6 +583,42 @@
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  }
+
+  // Write CSV content to an existing FSA file handle
+  function writeToHandle(handle, csv) {
+    return handle.createWritable().then(function (writable) {
+      return writable.write(csv).then(function () {
+        return writable.close();
+      });
+    });
+  }
+
+  // Save via File System Access API (overwrites the same file each time).
+  // On the first call it shows a save-file picker; subsequent calls in the
+  // same session reuse the stored handle and overwrite silently.
+  function saveCSVToFile(engineerCode, csv) {
+    if (csvFileHandle) {
+      // Already have a handle — overwrite silently
+      writeToHandle(csvFileHandle, csv).catch(function () {
+        // Handle became invalid (e.g. file was deleted); reset and try again
+        csvFileHandle = null;
+        saveCSVToFile(engineerCode, csv);
+      });
+      return;
+    }
+
+    // First save: show the picker
+    window.showSaveFilePicker({
+      suggestedName: 'wo-entries-' + engineerCode + '.csv',
+      types: [{ description: 'CSV file', accept: { 'text/csv': ['.csv'] } }]
+    }).then(function (handle) {
+      csvFileHandle = handle;
+      return writeToHandle(handle, csv);
+    }).catch(function () {
+      // User cancelled the picker — fall back to a regular download
+      triggerDownload(engineerCode, csv);
+    });
   }
 
   function csvCell(val) {
