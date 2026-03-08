@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Generate PWA Icons</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 480px;
+      margin: 60px auto;
+      padding: 0 24px;
+      color: #212121;
+    }
+    h2 { margin-bottom: 8px; }
+    p  { color: #616161; margin-bottom: 24px; line-height: 1.5; }
+    code {
+      background: #f0f4f8;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      background: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 6px 4px 6px 0;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #0d47a1; }
+    canvas { display: none; }
+    .done { color: #2e7d32; font-weight: 600; margin-top: 16px; display: none; }
+  </style>
+</head>
+<body>
+  <h2>Generate PWA Icons</h2>
+  <p>
+    Click each button to download the icon file, then place it in the
+    <code>icons/</code> folder inside <code>workorder-pwa/</code>.
+  </p>
+  <button class="btn" onclick="gen(192)">Download icon-192.png</button>
+  <button class="btn" onclick="gen(512)">Download icon-512.png</button>
+  <p class="done" id="done-msg">✓ Both icons generated! Place them in the icons/ folder.</p>
+
+  <canvas id="c"></canvas>
+
+  <script>
+    var downloaded = 0;
+
+    function gen(size) {
+      var canvas = document.getElementById('c');
+      canvas.width  = size;
+      canvas.height = size;
+      var ctx = canvas.getContext('2d');
+
+      // Background — rounded square
+      var r = size * 0.2;
+      ctx.beginPath();
+      ctx.moveTo(r, 0);
+      ctx.lineTo(size - r, 0);
+      ctx.quadraticCurveTo(size, 0, size, r);
+      ctx.lineTo(size, size - r);
+      ctx.quadraticCurveTo(size, size, size - r, size);
+      ctx.lineTo(r, size);
+      ctx.quadraticCurveTo(0, size, 0, size - r);
+      ctx.lineTo(0, r);
+      ctx.quadraticCurveTo(0, 0, r, 0);
+      ctx.closePath();
+      ctx.fillStyle = '#1565c0';
+      ctx.fill();
+
+      // "WO" text
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold ' + Math.round(size * 0.33) + 'px -apple-system, sans-serif';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('WO', size / 2, size / 2);
+
+      // Download
+      var a = document.createElement('a');
+      a.download = 'icon-' + size + '.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+
+      downloaded++;
+      if (downloaded >= 2) {
+        document.getElementById('done-msg').style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1565c0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WO Dashboard">
+  <title>Work Order Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+
+  <!-- ── LOGIN VIEW ─────────────────────────────────────────────────────── -->
+  <div id="view-login" class="view">
+    <div class="login-card">
+      <div class="logo">
+        <div class="logo-icon">WO</div>
+        <h1>Work Order Dashboard</h1>
+        <p>Sign in to view your work orders</p>
+      </div>
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label for="engineer-select">Engineer</label>
+          <select id="engineer-select" required>
+            <option value="">— Select your name —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="pin-input">PIN</label>
+          <input
+            type="password"
+            id="pin-input"
+            inputmode="numeric"
+            maxlength="20"
+            placeholder="Enter PIN"
+            required
+            autocomplete="current-password"
+          >
+        </div>
+        <div id="login-error" class="error-msg hidden">Incorrect PIN. Please try again.</div>
+        <button type="submit" class="btn-primary">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD VIEW ─────────────────────────────────────────────────── -->
+  <div id="view-dashboard" class="view hidden">
+    <header class="app-header">
+      <div class="header-content">
+        <div>
+          <div class="header-title">Work Orders</div>
+          <div id="header-engineer" class="header-subtitle"></div>
+        </div>
+        <button id="btn-logout" class="btn-logout">Sign Out</button>
+      </div>
+    </header>
+
+    <main class="dashboard-main">
+
+      <!-- Loading -->
+      <div id="loading-state" class="state-card">
+        <div class="spinner"></div>
+        <p>Loading your work orders…</p>
+      </div>
+
+      <!-- Error -->
+      <div id="error-state" class="state-card hidden">
+        <div class="state-icon">!</div>
+        <p id="error-message">Could not load data. Check your connection.</p>
+        <button id="btn-retry" class="btn-primary" style="width:auto;padding:10px 28px">Retry</button>
+      </div>
+
+      <!-- Content -->
+      <div id="dashboard-content" class="hidden">
+
+        <div class="summary-card">
+          <div class="summary-number" id="total-count">0</div>
+          <div class="summary-label">Total Work Orders</div>
+        </div>
+
+        <section class="breakdown-section">
+          <h2 class="section-title">By Notification Code</h2>
+          <div id="breakdown-grid" class="breakdown-grid"></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js')
+          .catch(function (err) { console.warn('SW registration failed:', err); });
+      });
+    }
+  </script>
+</body>
+</html>
