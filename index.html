@@ -45,6 +45,7 @@
         <div id="login-error" class="error-msg hidden">Incorrect PIN. Please try again.</div>
         <button type="submit" class="btn-primary">Sign In</button>
       </form>
+      <div id="version-label" class="version-label"></div>
     </div>
   </div>
 
@@ -81,6 +82,7 @@
         <div class="summary-card">
           <div class="summary-number" id="total-count">0</div>
           <div class="summary-label">Total Work Orders</div>
+          <button id="btn-view-all" class="btn-view-all">View All</button>
         </div>
 
         <section class="breakdown-section">
@@ -89,6 +91,70 @@
         </section>
 
       </div>
+    </main>
+  </div>
+
+  <!-- ── LIST VIEW ──────────────────────────────────────────────────────── -->
+  <div id="view-list" class="view hidden">
+    <header class="app-header">
+      <div class="header-content">
+        <button id="btn-back" class="btn-back">&#8592;</button>
+        <div class="header-center">
+          <div id="list-title" class="header-title"></div>
+          <div id="list-subtitle" class="header-subtitle"></div>
+        </div>
+        <button id="btn-logout-list" class="btn-logout">Sign Out</button>
+      </div>
+    </header>
+    <main class="list-main">
+      <div id="wo-list"></div>
+    </main>
+  </div>
+
+  <!-- ── DETAIL VIEW ────────────────────────────────────────────────────── -->
+  <div id="view-detail" class="view hidden">
+    <header class="app-header">
+      <div class="header-content">
+        <button id="btn-back-detail" class="btn-back">&#8592;</button>
+        <div class="header-center">
+          <div class="header-title">Work Order</div>
+          <div id="detail-wo-num" class="header-subtitle"></div>
+        </div>
+        <button id="btn-logout-detail" class="btn-logout">Sign Out</button>
+      </div>
+    </header>
+    <main class="detail-main">
+
+      <div id="detail-info" class="detail-card"></div>
+
+      <div class="entry-card">
+        <h2 class="section-title">Data Entry</h2>
+        <div class="form-group">
+          <label for="reading-input">Reading</label>
+          <input
+            type="number"
+            id="reading-input"
+            inputmode="numeric"
+            placeholder="Enter meter reading"
+            min="0"
+            step="1"
+          >
+        </div>
+        <div class="form-group">
+          <label for="comp-code-select">Completion Code</label>
+          <select id="comp-code-select">
+            <option value="">— Select completion code —</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="25">25</option>
+            <option value="27">27</option>
+            <option value="70">70</option>
+          </select>
+        </div>
+        <div id="save-feedback" class="save-feedback hidden">&#10003; Saved</div>
+        <button id="btn-save" class="btn-primary">Save</button>
+      </div>
+
     </main>
   </div>
 

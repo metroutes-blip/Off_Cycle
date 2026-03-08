@@ -12,6 +12,8 @@
 
 const CONFIG = {
 
+  VERSION: '1.1.0',
+
   // ── Published CSV URL ─────────────────────────────────────────────────
   // Get this from: File → Share → Publish to web → CSV
   CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTmjcAZ6v2j5Lrs_XhyPovwduIdtVjfnQKr0bqOau-MSyW3nuePnfoHsFAU4-OJWxilBqxCL3DKe2AA/pub?gid=0&single=true&output=csv',

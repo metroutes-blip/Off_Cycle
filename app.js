@@ -4,6 +4,8 @@
   // ── DOM refs ────────────────────────────────────────────────────────────
   var viewLogin       = document.getElementById('view-login');
   var viewDashboard   = document.getElementById('view-dashboard');
+  var viewList        = document.getElementById('view-list');
+  var viewDetail      = document.getElementById('view-detail');
   var loginForm       = document.getElementById('login-form');
   var engineerSelect  = document.getElementById('engineer-select');
   var pinInput        = document.getElementById('pin-input');
@@ -11,6 +13,20 @@
   var headerEngineer  = document.getElementById('header-engineer');
   var btnLogout       = document.getElementById('btn-logout');
   var btnRetry        = document.getElementById('btn-retry');
+  var btnViewAll      = document.getElementById('btn-view-all');
+  var btnBack         = document.getElementById('btn-back');
+  var btnLogoutList   = document.getElementById('btn-logout-list');
+  var listTitle       = document.getElementById('list-title');
+  var listSubtitle    = document.getElementById('list-subtitle');
+  var woList          = document.getElementById('wo-list');
+  var btnBackDetail   = document.getElementById('btn-back-detail');
+  var btnLogoutDetail = document.getElementById('btn-logout-detail');
+  var detailWoNum     = document.getElementById('detail-wo-num');
+  var detailInfo      = document.getElementById('detail-info');
+  var readingInput    = document.getElementById('reading-input');
+  var compCodeSelect  = document.getElementById('comp-code-select');
+  var btnSave         = document.getElementById('btn-save');
+  var saveFeedback    = document.getElementById('save-feedback');
   var loadingState    = document.getElementById('loading-state');
   var errorState      = document.getElementById('error-state');
   var errorMessage    = document.getElementById('error-message');
@@ -18,7 +34,27 @@
   var totalCount      = document.getElementById('total-count');
   var breakdownGrid   = document.getElementById('breakdown-grid');
 
+  // ── Cached data (set after first fetch) ─────────────────────────────────
+  var cachedMyRows    = null;   // rows filtered to the logged-in engineer
+  var cachedHeaders   = null;   // column header array
+  var cachedAddrIdx   = -1;
+  var cachedCityIdx   = -1;
+  var cachedWoIdx     = -1;
+  var cachedCodeIdx   = -1;
+  var cachedMeterNumIdx  = -1;
+  var cachedMeterSizeIdx = -1;
+  var cachedNotifTypeIdx = -1;
+  var cachedRefErtIdx    = -1;
+  var cachedMeterLocIdx  = -1;
+  var cachedTgtStartIdx  = -1;
+  var cachedTgtFinishIdx = -1;
+
+  // ── Navigation state ─────────────────────────────────────────────────────
+  var currentFilterCode = null;   // filter active when list view opened
+  var currentDetailRow  = null;   // raw row array for the open detail view
+
   // ── Boot ────────────────────────────────────────────────────────────────
+  document.getElementById('version-label').textContent = 'v' + CONFIG.VERSION;
   populateDropdown();
   checkSession();
 
@@ -84,13 +120,55 @@
   });
 
   // ── Logout ──────────────────────────────────────────────────────────────
-  btnLogout.addEventListener('click', function () {
+  function doLogout() {
     clearSession();
+    cachedMyRows = null;
+    currentFilterCode = null;
+    currentDetailRow = null;
     pinInput.value = '';
     engineerSelect.value = '';
     loginError.classList.add('hidden');
     viewDashboard.classList.add('hidden');
+    viewList.classList.add('hidden');
+    viewDetail.classList.add('hidden');
     viewLogin.classList.remove('hidden');
+  }
+  btnLogout.addEventListener('click', doLogout);
+  btnLogoutList.addEventListener('click', doLogout);
+  btnLogoutDetail.addEventListener('click', doLogout);
+
+  // ── View All ─────────────────────────────────────────────────────────────
+  btnViewAll.addEventListener('click', function () {
+    showList(null);
+  });
+
+  // ── Back: list → dashboard ───────────────────────────────────────────────
+  btnBack.addEventListener('click', function () {
+    viewList.classList.add('hidden');
+    viewDashboard.classList.remove('hidden');
+  });
+
+  // ── Back: detail → list ──────────────────────────────────────────────────
+  btnBackDetail.addEventListener('click', function () {
+    viewDetail.classList.add('hidden');
+    viewList.classList.remove('hidden');
+  });
+
+  // ── Save ─────────────────────────────────────────────────────────────────
+  btnSave.addEventListener('click', function () {
+    if (!currentDetailRow) return;
+    var wo = (currentDetailRow[cachedWoIdx] || '').trim();
+    if (!wo) return;
+    var entry = {
+      reading:  readingInput.value,
+      compCode: compCodeSelect.value,
+      savedAt:  new Date().toISOString()
+    };
+    try {
+      localStorage.setItem('wo_entry_' + wo, JSON.stringify(entry));
+    } catch (e) { /* storage unavailable */ }
+    saveFeedback.classList.remove('hidden');
+    setTimeout(function () { saveFeedback.classList.add('hidden'); }, 2500);
   });
 
   // ── Retry ───────────────────────────────────────────────────────────────
@@ -209,10 +287,25 @@
       return;
     }
 
+    // Cache column indices for list + detail views
+    cachedHeaders     = headers;
+    cachedWoIdx       = headers.indexOf('Workorder');
+    cachedAddrIdx     = headers.indexOf('Street Address');
+    cachedCityIdx     = headers.indexOf('City');
+    cachedCodeIdx     = notifCodeIdx;
+    cachedMeterNumIdx  = headers.indexOf('Meter Number');
+    cachedMeterSizeIdx = headers.indexOf('Meter Size');
+    cachedNotifTypeIdx = headers.indexOf('Notification Type');
+    cachedRefErtIdx    = headers.indexOf('Reference ERT');
+    cachedMeterLocIdx  = headers.indexOf('Meter Location');
+    cachedTgtStartIdx  = headers.indexOf('targetstart');
+    cachedTgtFinishIdx = headers.indexOf('targetfinish');
+
     // Filter rows for this engineer
     var myRows = rows.slice(1).filter(function (row) {
       return ((row[engineerIdx] || '').trim()) === engineerCode;
     });
+    cachedMyRows = myRows;
 
     // Count by notification code
     var codeCounts = {};
@@ -246,18 +339,137 @@
         var code  = pair[0];
         var count = pair[1];
         var card  = document.createElement('div');
-        card.className = 'code-card';
+        card.className = 'code-card code-card--clickable';
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
         card.innerHTML =
           '<div class="code-badge">' + esc(code) + '</div>' +
           '<div class="code-info">' +
             '<div class="code-count">' + count + '</div>' +
             '<div class="code-label">order' + (count !== 1 ? 's' : '') + '</div>' +
-          '</div>';
+          '</div>' +
+          '<div class="code-arrow">&#8250;</div>';
+        card.addEventListener('click', (function (c) {
+          return function () { showList(c); };
+        }(code)));
+        card.addEventListener('keydown', (function (c) {
+          return function (e) { if (e.key === 'Enter' || e.key === ' ') showList(c); };
+        }(code)));
         breakdownGrid.appendChild(card);
       });
     }
 
     setContent();
+  }
+
+  // ── Show list view ───────────────────────────────────────────────────────
+  function showList(filterCode) {
+    if (!cachedMyRows) return;
+    currentFilterCode = filterCode;
+    viewDashboard.classList.add('hidden');
+    viewList.classList.remove('hidden');
+    renderList(filterCode);
+  }
+
+  // ── Render list ──────────────────────────────────────────────────────────
+  function renderList(filterCode) {
+    var rows = filterCode
+      ? cachedMyRows.filter(function (r) {
+          return ((r[cachedCodeIdx] || '').trim()) === filterCode;
+        })
+      : cachedMyRows;
+
+    // Header
+    listTitle.textContent    = filterCode || 'All Work Orders';
+    listSubtitle.textContent = rows.length + ' work order' + (rows.length !== 1 ? 's' : '');
+
+    // List
+    woList.innerHTML = '';
+
+    if (rows.length === 0) {
+      var empty = document.createElement('p');
+      empty.style.cssText = 'text-align:center;color:#616161;padding:48px 16px';
+      empty.textContent = 'No work orders found.';
+      woList.appendChild(empty);
+      return;
+    }
+
+    rows.forEach(function (row) {
+      var wo   = (row[cachedWoIdx]   || '').trim();
+      var addr = (row[cachedAddrIdx] || '').trim();
+      var city = (row[cachedCityIdx] || '').trim();
+
+      var item = document.createElement('div');
+      item.className = 'wo-item wo-item--clickable';
+      item.innerHTML =
+        '<div class="wo-body">' +
+          '<div class="wo-address">' + esc(addr || '—') + '</div>' +
+          (city ? '<div class="wo-city">' + esc(city) + '</div>' : '') +
+        '</div>' +
+        (wo ? '<div class="wo-num">' + esc(wo) + '</div>' : '') +
+        '<div class="wo-arrow">&#8250;</div>';
+      item.addEventListener('click', (function (r) {
+        return function () { showDetail(r); };
+      }(row)));
+      woList.appendChild(item);
+    });
+  }
+
+  // ── Show detail view ─────────────────────────────────────────────────────
+  function showDetail(row) {
+    currentDetailRow = row;
+    viewList.classList.add('hidden');
+    viewDetail.classList.remove('hidden');
+    renderDetail(row);
+  }
+
+  // ── Render detail ────────────────────────────────────────────────────────
+  function renderDetail(row) {
+    var wo = (row[cachedWoIdx] || '').trim();
+    detailWoNum.textContent = wo || '';
+
+    // Info fields
+    var fields = [
+      { label: 'Work Order',        idx: cachedWoIdx },
+      { label: 'Address',           idx: cachedAddrIdx },
+      { label: 'City',              idx: cachedCityIdx },
+      { label: 'Meter Number',      idx: cachedMeterNumIdx },
+      { label: 'Meter Size',        idx: cachedMeterSizeIdx },
+      { label: 'Notification Type', idx: cachedNotifTypeIdx },
+      { label: 'Reference ERT',     idx: cachedRefErtIdx },
+      { label: 'Meter Location',    idx: cachedMeterLocIdx },
+      { label: 'Target Start',      idx: cachedTgtStartIdx },
+      { label: 'Target Finish',     idx: cachedTgtFinishIdx },
+    ];
+
+    detailInfo.innerHTML = '';
+    fields.forEach(function (f) {
+      var raw = (f.idx >= 0 ? (row[f.idx] || '') : '').trim();
+      if (!raw) return; // skip empty fields
+      // Strip time portion from date-like values (e.g. "2025-12-31 00:00")
+      var val = raw.replace(/\s00:00(:00)?$/, '');
+      var div = document.createElement('div');
+      div.className = 'detail-row';
+      div.innerHTML =
+        '<span class="detail-label">' + esc(f.label) + '</span>' +
+        '<span class="detail-value">' + esc(val) + '</span>';
+      detailInfo.appendChild(div);
+    });
+
+    // Restore any previously saved entry for this work order
+    readingInput.value = '';
+    compCodeSelect.value = '';
+    saveFeedback.classList.add('hidden');
+    if (wo) {
+      try {
+        var saved = localStorage.getItem('wo_entry_' + wo);
+        if (saved) {
+          var entry = JSON.parse(saved);
+          readingInput.value   = entry.reading  || '';
+          compCodeSelect.value = entry.compCode || '';
+        }
+      } catch (e) { /* ignore */ }
+    }
   }
 
   // ── UI state helpers ────────────────────────────────────────────────────

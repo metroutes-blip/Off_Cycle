@@ -1,6 +1,6 @@
 /* ── Work Order Dashboard — Service Worker ─────────────────────────────── */
 
-var CACHE_NAME = 'wo-dashboard-v1';
+var CACHE_NAME = 'wo-dashboard-v1.1.0
 
 var APP_SHELL = [
   './',
@@ -35,7 +35,7 @@ self.addEventListener('activate', function (event) {
     caches.keys().then(function (keys) {
       return Promise.all(
         keys.filter(function (k) { return k !== CACHE_NAME; })
-            .map(function (k) { return caches.delete(k); })
+          .map(function (k) { return caches.delete(k); })
       );
     }).then(function () {
       return self.clients.claim();
