@@ -107,6 +107,16 @@
       </div>
     </header>
     <main class="list-main">
+      <div class="search-container">
+        <input
+          type="search"
+          id="list-search"
+          placeholder="Search address, city, meter, WO#…"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+        >
+      </div>
       <div id="wo-list"></div>
     </main>
   </div>
@@ -150,6 +160,14 @@
             <option value="27">27</option>
             <option value="70">70</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label for="activity-text">Activity Text</label>
+          <textarea
+            id="activity-text"
+            placeholder="Enter activity notes…"
+            rows="4"
+          ></textarea>
         </div>
         <div id="save-feedback" class="save-feedback hidden">&#10003; Saved</div>
         <button id="btn-save" class="btn-primary">Save</button>
