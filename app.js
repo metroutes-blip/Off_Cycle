@@ -29,6 +29,7 @@
   var compCodeSelect  = document.getElementById('comp-code-select');
   var activityText    = document.getElementById('activity-text');
   var btnSave         = document.getElementById('btn-save');
+  var saveError       = document.getElementById('save-error');
   var saveFeedback    = document.getElementById('save-feedback');
   var loadingState    = document.getElementById('loading-state');
   var errorState      = document.getElementById('error-state');
@@ -193,6 +194,25 @@
     if (!currentDetailRow) return;
     var wo = (currentDetailRow[cachedWoIdx] || '').trim();
     if (!wo) return;
+
+    // Validation
+    var cc = compCodeSelect.value;
+    var validationMsg = '';
+    if (!cc) {
+      validationMsg = 'Please select a completion code.';
+    } else if (cc === '10' && !readingInput.value.trim()) {
+      validationMsg = 'A reading is required for completion code 10.';
+    } else if (cc !== '10' && !activityText.value.trim()) {
+      validationMsg = 'A comment is required for completion code ' + cc + '.';
+    }
+    if (validationMsg) {
+      saveError.textContent = validationMsg;
+      saveError.classList.remove('hidden');
+      saveFeedback.classList.add('hidden');
+      return;
+    }
+    saveError.classList.add('hidden');
+
     var entry = {
       woNum:        wo,
       address:      (currentDetailRow[cachedAddrIdx]      || '').trim(),
@@ -207,7 +227,7 @@
       reading:      readingInput.value,
       compCode:     compCodeSelect.value,
       activityText: activityText.value,
-      savedAt:      new Date().toISOString()
+      savedAt:      new Date().toLocaleString('en-CA', { timeZone: 'America/Toronto', hour12: false }).replace(',', '')
     };
     try {
       localStorage.setItem('wo_entry_' + wo, JSON.stringify(entry));
