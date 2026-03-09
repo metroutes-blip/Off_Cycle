@@ -204,8 +204,8 @@
       notifType:    (currentDetailRow[cachedNotifTypeIdx] || '').trim(),
       refErt:       (currentDetailRow[cachedRefErtIdx]    || '').trim(),
       meterLoc:     (currentDetailRow[cachedMeterLocIdx]  || '').trim(),
-      tgtStart:     (currentDetailRow[cachedTgtStartIdx]  || '').trim().replace(/\s00:00(:00)?$/, ''),
-      tgtFinish:    (currentDetailRow[cachedTgtFinishIdx] || '').trim().replace(/\s00:00(:00)?$/, ''),
+      tgtStart:     (currentDetailRow[cachedTgtStartIdx]  || '').trim().replace(/\s\d{2}:\d{2}(:\d{2})?$/, ''),
+      tgtFinish:    (currentDetailRow[cachedTgtFinishIdx] || '').trim().replace(/\s\d{2}:\d{2}(:\d{2})?$/, ''),
       reading:      readingInput.value,
       compCode:     compCodeSelect.value,
       activityText: activityText.value,
@@ -511,8 +511,10 @@
       var code   = (row[cachedCodeIdx]     || '').trim();
       var colors = getCodeColors(code);
 
+      var saved = wo && localStorage.getItem('wo_entry_' + wo) !== null;
+
       var item = document.createElement('div');
-      item.className = 'wo-item wo-item--clickable';
+      item.className = 'wo-item wo-item--clickable' + (saved ? ' wo-item--done' : '');
       if (colors.bg) item.style.borderLeft = '4px solid ' + colors.bg;
       item.innerHTML =
         '<div class="wo-body">' +
@@ -575,7 +577,7 @@
         group.forEach(function (f) {
           var raw = (f.idx >= 0 ? (row[f.idx] || '') : '').trim();
           if (!raw) return;
-          var val = f.date ? formatDate(raw) : raw.replace(/\s00:00(:00)?$/, '');
+          var val = f.date ? formatDate(raw) : raw.replace(/\s\d{2}:\d{2}(:\d{2})?$/, '');
           var div = document.createElement('div');
           div.className = 'detail-row';
           div.innerHTML =
@@ -587,7 +589,7 @@
       } else {
         var raw = (group.idx >= 0 ? (row[group.idx] || '') : '').trim();
         if (!raw) return;
-        var val = group.date ? formatDate(raw) : raw.replace(/\s00:00(:00)?$/, '');
+        var val = group.date ? formatDate(raw) : raw.replace(/\s\d{2}:\d{2}(:\d{2})?$/, '');
         var div = document.createElement('div');
         div.className = 'detail-row';
         div.innerHTML =
@@ -714,8 +716,8 @@
   // ── Date formatter: "2025-03-08" → "Mar 08 (Sat)" ───────────────────────
   function formatDate(val) {
     if (!val) return val;
-    var s = val.replace(/\s00:00(:00)?$/, '').trim();
-    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    var s = val.trim();
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (!m) return s; // not a recognised date — return as-is
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
