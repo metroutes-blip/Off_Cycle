@@ -12,7 +12,7 @@
 
 const CONFIG = {
 
-  VERSION: '2.0.0',
+  VERSION: '2.1.0',
 
   // ── Published CSV URL ─────────────────────────────────────────────────
   // Get this from: File → Share → Publish to web → CSV
