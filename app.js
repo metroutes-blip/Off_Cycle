@@ -565,7 +565,6 @@
 
     // Info fields — singles and [paired] groups (City removed)
     var fieldGroups = [
-      { label: 'Work Order',        idx: cachedCodeIdx },
       { label: 'Address',           idx: cachedAddrIdx },
       [
         { label: 'Meter Number',    idx: cachedMeterNumIdx },
