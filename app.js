@@ -23,6 +23,7 @@
   var btnBackDetail   = document.getElementById('btn-back-detail');
   var btnLogoutDetail = document.getElementById('btn-logout-detail');
   var detailHeader    = document.querySelector('#view-detail .app-header');
+  var detailHeaderTitle = document.querySelector('#view-detail .header-title');
   var detailWoNum     = document.getElementById('detail-wo-num');
   var detailInfo      = document.getElementById('detail-info');
   var readingInput    = document.getElementById('reading-input');
@@ -187,6 +188,7 @@
   btnBackDetail.addEventListener('click', function () {
     viewDetail.classList.add('hidden');
     viewList.classList.remove('hidden');
+    renderRows(currentListRows);
   });
 
   // ── Save ─────────────────────────────────────────────────────────────────
@@ -246,6 +248,7 @@
         // Last work order — return to list
         viewDetail.classList.add('hidden');
         viewList.classList.remove('hidden');
+        renderRows(currentListRows);
       }
     }, 800);
   });
@@ -554,14 +557,15 @@
     var wo = (row[cachedWoIdx] || '').trim();
     detailWoNum.textContent = wo || '';
 
-    // Colour the header banner by notification code
+    // Colour the header banner and show notification code as title
     var notifCode  = (cachedCodeIdx >= 0 ? (row[cachedCodeIdx] || '') : '').trim();
     var hdrColors  = getCodeColors(notifCode);
     detailHeader.style.background = hdrColors.bg || '#1565c0';
+    detailHeaderTitle.textContent = notifCode || 'Work Order';
 
     // Info fields — singles and [paired] groups (City removed)
     var fieldGroups = [
-      { label: 'Work Order',        idx: cachedWoIdx },
+      { label: 'Work Order',        idx: cachedCodeIdx },
       { label: 'Address',           idx: cachedAddrIdx },
       [
         { label: 'Meter Number',    idx: cachedMeterNumIdx },
@@ -671,18 +675,6 @@
         } catch (ex) { /* skip corrupt entry */ }
       });
     return rows.join('\r\n');
-  }
-
-  // Fallback: trigger a browser download (used when FSA is unavailable)
-  function triggerDownload(engineerCode, csv) {
-    var date = new Date().toISOString().slice(0, 10);
-    var filename = 'wo-entries-' + engineerCode + '-' + date + '.csv';
-    var a = document.createElement('a');
-    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
   }
 
   // Silent background save to Origin Private File System (no prompts ever)
